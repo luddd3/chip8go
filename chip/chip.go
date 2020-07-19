@@ -8,6 +8,7 @@ import (
 
 type Chip struct {
 	memory     []byte   // 4096 bytes
+	display    []byte   // 64x32 bytes (pixels)
 	stack      []uint16 // 16 16-bit values
 	v          []byte   // 16 8-bit registers Vx (0-F)
 	dt         byte     // 8-bit register for delay timer (decremented at 60Hz)
@@ -41,6 +42,7 @@ var keyMap = map[rune]byte{
 
 func New() *Chip {
 	memory := make([]byte, 4096)
+	display := make([]byte, 64*32)
 	fontSet := []byte{
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -65,6 +67,7 @@ func New() *Chip {
 
 	return &Chip{
 		memory:   memory,
+		display:  display,
 		v:        make([]byte, 16),
 		dt:       0,
 		st:       0,
@@ -118,6 +121,7 @@ func (c *Chip) nextOp() error {
 		// CLS (00E0)
 		case 0x00E0:
 			// Clear the display
+			c.clearDisplay()
 			break
 		// RET (00EE)
 		case 0x00EE:
@@ -291,8 +295,7 @@ func (c *Chip) nextOp() error {
 		x := c.memory[pc] & 0x0F
 		y := (c.memory[pc+1] & 0xF0) >> 2
 		n := c.memory[pc+1] & 0x0F
-		sprite := c.memory[c.i:n]
-		c.displaySprite(c.v[x], c.v[y], sprite)
+		c.displaySprite(c.v[x], c.v[y], byte(c.i), byte(n))
 		break
 	case 0xE000:
 		switch opcode & 0x00FF {
@@ -392,8 +395,46 @@ func (c *Chip) draw() {
 	panic("not implemented yet!")
 }
 
-func (c *Chip) displaySprite(x byte, y byte, sprite []byte) {
-	panic("not implemented yet!")
+func (c *Chip) clearDisplay() {
+	for i := range c.display {
+		c.display[i] = 0
+	}
+	c.drawFlag = true
+}
+
+// (00,00)-------------(64,00)
+// |                         |
+// |                         |
+// (00,32)-------------(64,32)
+func (c *Chip) displaySprite(x byte, y byte, i byte, n byte) {
+	c.v[0xF] = 0
+
+	for q := byte(0); q < n; q++ {
+		for p := byte(0); p < 8; p++ {
+			// 0x80 >> p takes a bit for every loop
+			// E.g.
+			// memory & 0b10000000 >> 1
+			pix := c.memory[i+q] & (0x80 >> p)
+			if pix != 0 {
+				tx := x + p
+				ty := y + q
+				if tx >= 64 {
+					tx -= 64
+				}
+				if ty >= 32 {
+					ty -= 32
+				}
+
+				// Set VF on collision...
+				if c.display[ty*64+x] == 1 {
+					c.v[0xF] = 1
+				}
+
+				c.display[ty*64+x] ^= 1
+			}
+		}
+	}
+	c.drawFlag = true
 }
 
 func (c *Chip) isPressed(val byte) bool {
