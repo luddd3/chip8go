@@ -2,30 +2,35 @@ package main
 
 import (
 	"fmt"
-	"github.com/gdamore/tcell"
 	"os"
+
+	"github.com/luddd3/chip8/chip"
+	"github.com/gdamore/tcell"
 )
 
 func main() {
 	tcell.SetEncodingFallback(tcell.EncodingFallbackASCII)
-	s, e := tcell.NewScreen()
-	s.SetStyle(tcell.StyleDefault.
+	screen, err := tcell.NewScreen()
+	screen.SetStyle(tcell.StyleDefault.
 		Foreground(tcell.ColorBlack).
 		Background(tcell.ColorWhite))
-	s.Clear()
-	if e != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", e)
+	screen.Clear()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	if e = s.Init(); e != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", e)
+	if err = screen.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
-	s.SetStyle(tcell.StyleDefault.
+	screen.SetStyle(tcell.StyleDefault.
 		Foreground(tcell.ColorBlack).
 		Background(tcell.ColorWhite))
-	s.Clear()
+	screen.Clear()
+
+	chip := chip.New(&screen)
+
 	quit := make(chan struct{})
 	go func() {
 		for {

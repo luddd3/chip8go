@@ -2,11 +2,15 @@ package chip
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
+
+	"github.com/gdamore/tcell"
 )
 
 type Chip struct {
+	screen     tcell.Screen
 	memory     []byte   // 4096 bytes
 	display    []byte   // 64x32 bytes (pixels)
 	stack      []uint16 // 16 16-bit values
@@ -40,7 +44,7 @@ var keyMap = map[rune]byte{
 	'V': 16, // V
 }
 
-func New() *Chip {
+func New(screen tcell.Screen) *Chip {
 	memory := make([]byte, 4096)
 	display := make([]byte, 64*32)
 	fontSet := []byte{
@@ -66,6 +70,7 @@ func New() *Chip {
 	}
 
 	return &Chip{
+		screen:   screen,
 		memory:   memory,
 		display:  display,
 		v:        make([]byte, 16),
@@ -392,7 +397,24 @@ func unrecognizedOpcode(opcode uint16) error {
 }
 
 func (c *Chip) draw() {
-	panic("not implemented yet!")
+	var width float64 = 64
+
+	st := tcell.StyleDefault
+	black := st.Background(tcell.NewHexColor(0))
+	gray := st.Background(tcell.NewHexColor(0x444444))
+
+	var glyph rune = '0'
+
+	for i := range c.display {
+		x := i % 64
+		y := int(math.Floor(float64(i) / width))
+
+		if c.display[i] == 1 {
+			c.screen.SetCell(x, y, black, glyph)
+		} else {
+			c.screen.SetCell(x, y, gray, glyph)
+		}
+	}
 }
 
 func (c *Chip) clearDisplay() {
