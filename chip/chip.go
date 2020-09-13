@@ -102,7 +102,7 @@ func (c *Chip) KeyUp(char rune) {
 	c.currentKey = 0
 }
 
-func (c *Chip) cycle() {
+func (c *Chip) Cycle() {
 	for {
 		err := c.nextOp()
 		if err != nil {

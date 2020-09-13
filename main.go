@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
-	"github.com/luddd3/chip8/chip"
 	"github.com/gdamore/tcell"
+	"github.com/luddd3/chip8/chip"
 )
 
 func main() {
@@ -29,12 +30,18 @@ func main() {
 		Background(tcell.ColorWhite))
 	screen.Clear()
 
-	chip := chip.New(&screen)
+	chip := chip.New(screen)
+	rom, err := ioutil.ReadFile("roms/tetris.ch8")
+	chip.LoadRom(rom)
+
+	go func() {
+		chip.Cycle()
+	}()
 
 	quit := make(chan struct{})
 	go func() {
 		for {
-			ev := s.PollEvent()
+			ev := screen.PollEvent()
 			switch ev := ev.(type) {
 			case *tcell.EventKey:
 				switch ev.Key() {
@@ -42,11 +49,12 @@ func main() {
 					close(quit)
 					return
 				case tcell.KeyCtrlL:
-					s.Sync()
+					screen.Sync()
 				}
 			case *tcell.EventResize:
-				s.Sync()
+				screen.Sync()
 			}
 		}
 	}()
+	<-quit
 }
